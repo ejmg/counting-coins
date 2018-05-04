@@ -6,13 +6,14 @@
 
 (ns counting-coins.core
   (:require [clojure.java.io :as io]
-            [clojure.string :as string]))
+            [clojure.string :as string]
+            [spyscope.core]))
 
 ;; TODO
 
 ;; 0.  actually finish out game logic. it isn’t hard now that i have the syntax
-;; of this language somewhat figured out.  i will probably want to use recur in
-;; my main play function for the loop recurrence
+;; of this language somewhat figured out.  i will probably want to use `recur‘
+;; in my main play function for the loop recurrence.
 
 ;; 1.
 ;; figure out whether to use pmap, preduce, or the clojure.core/reducer
@@ -46,7 +47,7 @@
   "applies regex to coin file `f` to remove any non-coin values, i.e. integers,
   splits them with a space, and then parses them into integer values"
   [f]
-  (pmap #(Integer/parseInt %)
+  (map #(Integer/parseInt %)
        (re-seq #"\d+"
                (slurp f))))
 
@@ -54,26 +55,85 @@
   "returns the sum of all even integers currently in `coins` list"
   [coins]
   (reduce +
-          (filter even? coins)))
+          (take-nth 2 (rest coins))))
 
 (defn get-odd-sum
   "returns the sum of all odd integers currently in `coins` list"
   [coins]
   (reduce +
-          (filter odd? coins)))
+          (take-nth 2 coins)))
 
-(defn lets-play-a-game
+(defn get-end-sums
+  "returns the sum of the even and odd sums for the coin list if last token is
+  taken"
+  [coins]
+  (+ (get-odd-sum (butlast coins))
+     (get-even-sum (butlast coins))))
+
+(defn get-start-sums
+  "returns the sum of the even and odd sums for the coin list if first token
+  is taken"
+  [coins]
+  (+ (get-odd-sum (drop 1 (coins)))
+     (get-even-sum (drop 1 coins))))
+
+
+(defn lets-play-a-gameq
   "plays the coin game on a street corner somewhere in london, circa 1870s"
-  []
-  (loop [p1 0
-         p2 0
-         turns (count coins)]
-    (if (= turns 1)
-      (+ p2 ))
-      )
-  )
+  [p1 p2 coins turns]
+  (cond
+    (= turns 1) [p1 (+ p2 (last coins)) coins turns]
+    (even? turns) (if (> (get-even-sum coins)
+                         (get-odd-sum coins))
+                    (recur (+ p1 (last coins))
+                           p2
+                           (butlast coins)
+                           (dec (count coins)))
+                    (recur (+ p1 (first coins))
+                           p2
+                           (first coins)
+                           (dec (count coins))))
+    (odd? turns) (if (> (get-even-sum coins)
+                        (get-odd-sum coins))
+                   (recur p1
+                          (+ p2 (first coins))
+                          (drop 1 coins)
+                          (dec (count coins)))
+                   (recur p1
+                          (+ p2 (last coins))
+                          (butlast coins)
+                          (dec (count coins))))))
 
 
+(defn play-game
+  [a b c d]
+  (loop [p1 a
+         p2 b
+         coins c
+         turns d]
+    (cond (= turns 1)
+          [p1 (+ p2 (last coins))]
+          (even? turns)
+          (if (> (get-even-sum coins)
+                 (get-odd-sum coins))
+            (recur (+ p1 (last coins))
+                   (p2)
+                   (butlast coins)
+                   (dec (count coins)))
+            (recur (+ p1 (first coins))
+                   (p2)
+                   (first coins)
+                   (dec (count coins))))
+          :else (if (> (get-start-sums coins)
+                       (get-end-sums coins))
+                  (recur p1
+                         (+ p2 (first coins))
+                         (drop 1 coins)
+                         (dec (count coins)))
+                  (recur p1
+                         (+ p2 (last coins))
+                         (butlast coins)
+                         (dec (count coins)))))))
 
 (defn -main
   "I don't do a whole lot."
