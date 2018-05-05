@@ -7,7 +7,8 @@
 (ns counting-coins.core
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
-            [spyscope.core]))
+            [java.util.concurrent.Executors])
+  (:gen-class))
 
 ;; TODO
 
@@ -78,12 +79,12 @@
      (get-even-sum (drop 1 coins))))
 
 
-(defn lets-play-a-gameq
+(defn lets-play-a-game
   "plays the coin game on a street corner somewhere in london, circa 1870s"
   [p1 p2 coins turns]
   (cond
-    (= turns 1) [p1 (+ p2 (last coins)) coins turns]
-    (even? turns) (if (> (get-even-sum coins)
+    (= turns 1) [p1 (+ p2 (last coins))]
+    (even? turns) (if (>= (get-even-sum coins)
                          (get-odd-sum coins))
                     (recur (+ p1 (last coins))
                            p2
@@ -91,9 +92,9 @@
                            (dec (count coins)))
                     (recur (+ p1 (first coins))
                            p2
-                           (first coins)
+                           (drop 1 coins)
                            (dec (count coins))))
-    (odd? turns) (if (> (get-even-sum coins)
+    (odd? turns) (if (>= (get-even-sum coins)
                         (get-odd-sum coins))
                    (recur p1
                           (+ p2 (first coins))
@@ -104,40 +105,28 @@
                           (butlast coins)
                           (dec (count coins))))))
 
-
-(defn play-game
-  [a b c d]
-  (loop [p1 a
-         p2 b
-         coins c
-         turns d]
-    (cond (= turns 1)
-          [p1 (+ p2 (last coins))]
-          (even? turns)
-          (if (> (get-even-sum coins)
-                 (get-odd-sum coins))
-            (recur (+ p1 (last coins))
-                   (p2)
-                   (butlast coins)
-                   (dec (count coins)))
-            (recur (+ p1 (first coins))
-                   (p2)
-                   (first coins)
-                   (dec (count coins))))
-          :else (if (> (get-start-sums coins)
-                       (get-end-sums coins))
-                  (recur p1
-                         (+ p2 (first coins))
-                         (drop 1 coins)
-                         (dec (count coins)))
-                  (recur p1
-                         (+ p2 (last coins))
-                         (butlast coins)
-                         (dec (count coins)))))))
+(defn run-concurrently
+  "run the coin game on `n` threads"
+  [coins n]
+   (let [thread-pool (java.util.concurrent.Executors/newFixedThreadPool n)]
+     (try
+       (write-results (lets-play-a-game 0 0 coins (count coins)))
+       (catch Exception e
+              (println (str "Error while multithreading: " e)))
+    (finally
+      ;; (.shutdown) only prohib  s submitting new tasks,
+      ;; (.shutdownNow) will even cancel already submitted tasks.
+      (.shutdownNow thread-pool)))))
 
 (defn -main
   "I don't do a whole lot."
-  []  
-  (println "hello?")
-  (let [user_input (read-line)]
-       (println user_input)))
+  [file n]
+  (try
+    (println (str file))
+     (time
+      (let [coins (extract-coins file)]
+        (time (run-concurrently coins n))))
+     (catch Exception e
+       (println "counting-coins usage: lein run <FILENAME> <#THREADS>\n")
+       (println "<FILENAME> is the full name of the textfile in the local directory.")
+       (println "<#THREADS> is the number of threads to run the program on."))))
