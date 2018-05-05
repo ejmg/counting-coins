@@ -10,29 +10,6 @@
             [java.util.concurrent.Executors])
   (:gen-class))
 
-;; TODO
-
-;; 0.  actually finish out game logic. it isn’t hard now that i have the syntax
-;; of this language somewhat figured out.  i will probably want to use `recur‘
-;; in my main play function for the loop recurrence.
-
-;; 1.
-;; figure out whether to use pmap, preduce, or the clojure.core/reducer
-;; equivalents vs built in map, reduce, etc.
-
-;; 2.
-;; figure out multithreading.
-;; from readings so far, it appears i will want to use agents and or Executors
-;; to manage pools via java.util.concurrent.Executors
-
-;; 3.
-;; test
-
-;; 4.
-;; package into an uber jar
-;; this will probably involve turning this project template into an app,
-;; which to my knowledge, isn’t actually that big of a difference
-
 
 (def input_test10 (str (System/getProperty "user.dir") "/10.txt"))
 (def input_test10k (str (System/getProperty "user.dir") "/10000.txt"))
@@ -114,8 +91,6 @@
        (catch Exception e
               (println (str "Error while multithreading: " e)))
     (finally
-      ;; (.shutdown) only prohib  s submitting new tasks,
-      ;; (.shutdownNow) will even cancel already submitted tasks.
       (.shutdownNow thread-pool)))))
 
 (defn -main
