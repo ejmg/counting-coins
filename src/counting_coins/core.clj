@@ -60,41 +60,43 @@
   "plays the coin game on a street corner somewhere in london, circa 1870s"
   [p1 p2 coins turns]
   (cond
-    (= turns 1) [p1 (+ p2 (last coins))]
+    (= turns 0) (do
+                  (println "p1:" p1 "p2:" p2)
+                  [p1 p2 "\n"])
     (even? turns) (if (>= (get-even-sum coins)
-                         (get-odd-sum coins))
-                    (recur (+ p1 (last coins))
-                           p2
-                           (butlast coins)
-                           (dec (count coins)))
-                    (recur (+ p1 (first coins))
-                           p2
+                           (get-odd-sum coins))
+                     (recur (+ p1 (last coins))
+                            p2
+                            (butlast coins)
+                            (dec (count coins)))
+                     (recur (+ p1 (first coins))
+                            p2
+                            (drop 1 coins)
+                            (dec (count coins))))
+    (odd? turns)(if (>= (get-even-sum coins)
+                          (get-odd-sum coins))
+                    (recur p1
+                           (+ p2 (first coins))
                            (drop 1 coins)
-                           (dec (count coins))))
-    (odd? turns) (if (>= (get-even-sum coins)
-                        (get-odd-sum coins))
-                   (recur p1
-                          (+ p2 (first coins))
-                          (drop 1 coins)
-                          (dec (count coins)))
-                   (recur p1
-                          (+ p2 (last coins))
-                          (butlast coins)
-                          (dec (count coins))))))
+                           (dec (count coins)))
+                    (recur p1
+                           (+ p2 (last coins))
+                           (butlast coins)
+                           (dec (count coins))))))
 
 (defn run-concurrently
   "run the coin game on `n` threads"
   [coins n]
    (let [thread-pool (java.util.concurrent.Executors/newFixedThreadPool n)]
      (try
-       (write-results (lets-play-a-game 0 0 coins (count coins)))
+       (doseq [future (.invokeAll thread-pool (lets-play-a-game 0 0 coins (count coins)))]
+         (.get future))
        (catch Exception e
               (println (str "Error while multithreading: " e)))
     (finally
-      (.shutdownNow thread-pool)))))
+      (.shutdown thread-pool)))))
 
 (defn -main
-  "I don't do a whole lot."
   [file n]
   (try
     (println (str file))
